@@ -1,175 +1,97 @@
 # Telegram ↔ IntelliJ IDEA
 
-Бот и окно Tkinter работают отдельным процессом. Агент запускается **из IntelliJ**
-через существующую запись **Codex via Telegram**. Настройки проекта, инструменты
-MCP, доступ к файлам и терминалам, подтверждения и история чата остаются в этом
-же соединении с IDE.
+[English version](#english)
 
-```text
-IntelliJ AI Assistant ⇄ bridge.py / ide_link.py ⇄ локальный бот ⇄ codex-acp
-                                                     ⇅
-                                                Telegram / Tkinter
-```
+Мост подключает Telegram к Codex ACP в IntelliJ IDEA. Проверен с IntelliJ IDEA 2026.2.3 (build 262.10968.223) и JetBrains AI Assistant.
 
-`codex-acp` — дочерний процесс посредника, запущенного IntelliJ. Локальный бот
-маршрутизирует ACP между ним и IDE через именованный канал Windows с отдельным
-ключом аутентификации. Используется JSON; открытых интернет-портов нет.
+Исходники можно быстро адаптировать под себя: попросите Codex добавить нужную функцию, а затем просмотрите изменения в IntelliJ.
 
-## Требования
+## Быстрый старт
 
-- Windows и Python 3.11+ с Tkinter; внешние Python-пакеты не нужны.
-- IntelliJ IDEA с установленным и включённым **JetBrains AI Assistant**.
-- Codex ACP настроен в IntelliJ, нужный проект открыт, а AI Assistant авторизован.
-- Telegram-бот создан и привязан через `python setup.py`.
+Нужны Windows, Python 3.11+ с Tkinter, IntelliJ IDEA с установленным и включённым JetBrains AI Assistant, настроенный Codex ACP и Telegram-бот. Внешние Python-пакеты не нужны.
 
-## Обновление и запуск
+1. Из папки репозитория выполните `python setup.py`. Следуйте подсказкам, чтобы создать локальную конфигурацию и привязать бота.
+2. Добавьте содержимое созданного `acp-entry.local.json` в `agent_servers` файла `~/.jetbrains/acp.json`, сохранив остальные записи.
+3. Установите `idea-helper/dist/telegram-chat-helper.zip` через **Settings → Plugins → ⚙ → Install Plugin from Disk** и перезапустите IntelliJ.
+4. Запустите `start_bot.cmd`, оставьте проект открытым и нажмите **«Новый чат»** в Telegram или окне бота. Подтвердите подключение в IntelliJ и отправьте задачу.
 
-1. Заверши старое окно бота и один раз перезапусти IntelliJ, чтобы загрузился новый
-   код посредника. Во время обновления дождись окончания текущей задачи.
-2. Запусти **`start_bot.cmd`**. Окно и Telegram доступны даже без открытого AI-чата.
-3. Один раз установи `idea-helper/dist/telegram-chat-helper.zip`:
-   **Settings → Plugins → ⚙ → Install Plugin from Disk**, затем перезапусти IDE.
-4. Оставь проект открытым в IntelliJ и нажми **«✨ Новый чат»** в Telegram
-   или **«Новый чат»** в окне бота. После подтверждения подключения отправь задачу.
-   AI Assistant сам создаёт чат **Codex via Telegram**, запускает его агент и
-   передаёт инструменты IDE. Бот автоматически выбирает новый чат.
-   Существующий чат можно выбрать через **«💬 Выбрать чат»**.
+Помощник Telegram Chat Helper нужен для создания чатов. Сам AI-чат заранее открывать не нужно. Плагин проверен с IDEA build `262.10968.223` и использует внутренний API AI Assistant; с другими сборками совместимость не гарантируется.
 
-Токен и JSON записи агента повторно вводить не нужно. Используется прежняя
-настройка `bridge.py --config ...` с `use_idea_mcp` и `use_custom_mcp`.
-Отдельный импорт MCP IntelliJ не требуется.
+## Команды
 
-Крестик сворачивает окно. Кнопка **«Завершить бота»** останавливает его и разрывает
-соединение агента с IDE; активная задача может прерваться. Закрытие AI-чата/агента
-оставляет бот и окно работать, следующие подключения IntelliJ принимаются заново.
-Одновременно поддерживаются несколько процессов ACP IntelliJ. У каждого отдельная
-маршрутизация запросов. Отключение одного удаляет его задания из очереди и не
-отключает остальные чаты. При потере выбранного чата план сна отменяется.
+- `/new`, `/sessions`, `/use ID` — создать или выбрать чат IntelliJ.
+- Текст или `/ask ТЕКСТ` — отправить задачу; `/cancel` — остановить её.
+- `/queue ТЕКСТ`, `/queue`, `/clearqueue`, `/resumequeue` — управлять очередью.
+- `/models`, `/efforts` — выбрать модель и уровень рассуждения, если их предоставляет агент.
+- `/pending` — открыть ожидающие подтверждения и вопросы.
+- `/notes`, `/note ТЕКСТ`, `/screenshot`, `/compact`, `/limits` — заметки, снимок экрана, сжатие контекста и лимиты Codex.
+- `/sleep 08:30`, `/sleep_after 08:30`, `/nosleep` — планировать или отменить гибернацию Windows.
 
-**Создание чата требует Telegram Chat Helper и открытого проекта IntelliJ.**
-Сам AI-чат заранее открывать не нужно. Плагин использует внутренний API установленного
-AI Assistant 262.10968.223; ZIP ограничен сборкой IDE 262.10968.*. После обновления IDE
-совместимость нужно проверить и при необходимости пересобрать плагин.
-Текущая сборка скомпилирована; живое открытие чата проверяется после установки ZIP.
-Вход в аккаунт и первоначальные подтверждения агента выполняются в IntelliJ.
-Если подключение не подтверждено за 2 минуты, бот сообщает об этом. Перед повторным
-созданием проверь `/sessions`: чат мог успеть открыться. Запросы автоматически не повторяются.
-Без AI-чата работают меню, заметки, скриншоты и команды питания.
+Полный список действий доступен через `/menu`. Команды и подтверждения принимает только привязанный владелец в личном чате.
 
-## Доработка проекта
+## Доработка
 
-Поскольку Codex запускается из IntelliJ в открытом проекте, боту можно поручить
-реализацию недостающих функций самого моста. Например: «Добавь команду `/foo`,
-которая делает X; добавь её в меню и опиши в README». Опиши ожидаемое поведение и
-уточни, где функция должна быть доступна — в Telegram, окне бота или в обоих местах.
-После изменений просмотри diff в IntelliJ. Если менялись команды или интерфейс,
-перезапусти окно бота, чтобы загрузить новый код.
+Попросите Codex реализовать недостающую функцию в этом проекте. Например: «Добавь команду `/foo`, которая делает X; добавь кнопку в меню и обнови README». Укажите, где она нужна — в Telegram, окне бота или в обоих местах. Просмотрите diff в IntelliJ; после изменения кода перезапустите бота.
 
-## Кнопки и команды
+## Важно
 
-- `/menu` — клавиатура с действиями и подсказками.
-- **«✨ Новый чат»** (`/new`) — чистый чат в AI Assistant с прежней настройкой агента.
-- `/sessions`, `/use ID` — выбрать реальный чат IntelliJ; в меню ID вводить не нужно.
-- **«🤖 Модель»** (`/models`), **«🧠 Рассуждение»** (`/efforts`) — выбор из настроек,
-  предоставленных агентом для текущего чата. Изменения идут через ACP и передаются
-  обратно в IDE. Во время задачи или очереди переключение недоступно.
-- Обычный текст или `/ask ТЕКСТ` — задача. `/cancel` — остановить текущую задачу.
-- `/queue ТЕКСТ`, `/queue`, `/clearqueue`, `/resumequeue` — очередь задач.
-- `/last` — последний ответ; `/status` — состояние.
-- **«📉 Лимиты Codex»** (`/limits`) — процент оставшегося пятичасового и недельного
-  лимита, время сброса по часам ПК. В окне ПК есть кнопка обновления; при запуске
-  данные загружаются автоматически. Используется установленный Codex и его текущий
-  аккаунт, без запроса модели. Число оставшихся запросов недоступно: расход зависит
-  от объёма задач. Для новой функции перезапусти окно бота.
-- `/pending` — повторить подтверждения/вопросы. Решение принимается кнопкой;
-  формы поддерживают `/answer КОД {"поле":"ответ"}` и `/decline КОД`.
-- **«📒 Заметки»**, **«✍ Добавить заметку»** (`/notes`, `/note ТЕКСТ`) — запись на ПК,
-  сохраняется после перезапуска и сжатия. Последние 20 показываются в Telegram;
-  лимит хранения — 500 заметок по 8000 символов.
-- **«📷 Скриншот»** (`/screenshot`) — основной экран Windows, до 1600 пикселей по
-  длинной стороне. Заблокированный или защищённый рабочий стол недоступен.
-- **«🧹 Сжать контекст»** (`/compact`) — встроенная команда агента в том же чате.
-  Сохраняет краткое изложение; полностью чистый контекст — новый чат в IDE.
-- `/sleep 08:30` — гибернация до времени; `/sleep_after 08:30` — после задач.
-  Принимается и `YYYY-MM-DD HH:MM`. Часовой пояс компьютера.
-- `/nosleep` — отмена плана. Отсчёт 15 секунд начинается после доставки сообщения.
+- Первое подключение и разрешения подтверждаются в IntelliJ. Если чат не появился за две минуты, проверьте `/sessions` перед повтором: запросы автоматически не повторяются.
+- Кнопка **«Завершить бота»** останавливает процесс и может прервать текущую задачу. Обычное закрытие AI-чата оставляет бота запущенным.
+- Для команд сна нужны разрешённая гибернация и таймеры пробуждения Windows; окно бота должно оставаться запущенным.
+- Не публикуйте `bot-token.txt`, `*.local.json`, `*.local.tmp` и `notes.local.json`: там секреты, локальные настройки и личные заметки.
 
-Пошаговый ввод кнопками действует 5 минут. **«↩ Отмена ввода»** возвращает в меню.
-Сообщения и подтверждения принимаются только от привязанного владельца в личном
-чате. Неподдерживаемые формы передаются IntelliJ. Мысли агента и повтор истории
-в Telegram не пересылаются.
+## Проверка
 
-## Сон и восстановление связи
-
-Бот удерживает Windows от автоматического сна, включая повторный сон через
-unattended timeout после пробуждения по таймеру. Монитор может оставаться выключенным.
-Гибернация по команде и ручной сон Windows доступны. Схема питания не меняется;
-при завершении процесса удержание снимается.
-
-Для таймера нужны разрешённая гибернация и обычные таймеры пробуждения для текущего
-источника питания. Они проверяются до сна. Первую проверку пробуждения выполни дома.
-Окно бота должно оставаться запущенным. VPN/интернет могут восстанавливаться некоторое
-время: сетевые запросы повторяются, временный конфликт Telegram 409 также повторяется.
-Ошибка 401 требует проверки токена. Не запускай второй бот с тем же токеном на другом ПК.
-
-## Первичная настройка (только для новой установки)
-
-Нужны Windows и Python 3.11+ с Tkinter, установленный через IntelliJ агент Codex.
-Внешних Python-пакетов нет.
-
-1. `python setup.py` — создать конфигурацию, локально ввести токен, выполнить
-   одноразовую привязку владельца через Telegram.
-2. Добавить запись из `acp-entry.local.json` в `agent_servers` файла
-   `~/.jetbrains/acp.json`, сохранив остальные записи.
-3. Открыть агента **Codex via Telegram** в IntelliJ и выбрать чат в боте.
-
-`python setup.py --prepare` только создаёт локальные файлы, без сети и перепривязки.
-Не публикуй `bot-token.txt`, `*.local.json` и `*.local.tmp`: в них локальные настройки
-и секреты. `notes.local.json` содержит заметки. Оставшийся `desktop.local.json`
-старого автономного режима не используется; данные из него автоматически не удаляются.
-
-## Файлы и проверки
-
-- `bridge.py` — маршрутизация ACP, меню, задачи, разрешения, Telegram HTTP.
-- `ide_link.py` — stdio-посредник IntelliJ и управление дочерним адаптером.
-- `ipc.py` — локальное соединение с постоянно работающим ботом.
-- `new_chat.py`, `idea-helper/` — создание настоящего чата через локальный плагин IDE.
-- `standalone.py`, `dashboard.py`, `start_bot.cmd` — один процесс бота и один интерфейс.
-- `power.py`, `screenshot.py`, `notes.py` — функции ПК и заметки.
-- `setup.py` — первичная настройка; `smoke_check.py` — проверка реального адаптера.
-
-Из корня проекта:
+Из корня проекта запустите:
 
 ```powershell
-python -m unittest discover -s tools/telegram-acp-bridge -p "test_*.py"
-python tools/telegram-acp-bridge/smoke_check.py
+python -m unittest discover -s . -p "test_*.py"
 ```
 
-Тесты проверяют передачу настроек MCP без изменений, обращения агента к IDE,
-повторное подключение после EOF, независимую работу окна, выбор модели через ACP,
-авторизацию владельца, подтверждения, сеть, очередь, заметки, скриншоты и питание.
-Проверка адаптера выполняет только initialize, без запроса модели и Telegram.
-`bridge.py --config ... --stdio-only` — прямой диагностический режим без окна и сети.
+## English
 
-Файлы находятся в `tools/telegram-acp-bridge`, вне ресурсов и исходников мода.
+This bridge connects Telegram to Codex ACP in IntelliJ IDEA. It has been tested with IntelliJ IDEA 2026.2.3 (build 262.10968.223) and JetBrains AI Assistant.
 
-## Сборка вспомогательного плагина
+You can adapt the source to your needs: ask Codex to add a feature, then review the changes in IntelliJ.
 
-Из корня проекта (требуется JDK 21):
+### Quick start
+
+You need Windows, Python 3.11+ with Tkinter, IntelliJ IDEA with JetBrains AI Assistant installed and enabled, Codex ACP configured, and a Telegram bot. No extra Python packages are required.
+
+1. From the repository root, run `python setup.py`. Follow the prompts to create the local configuration and pair your bot.
+2. Merge the generated `acp-entry.local.json` into `agent_servers` in `~/.jetbrains/acp.json`, preserving other entries.
+3. Install `idea-helper/dist/telegram-chat-helper.zip` using **Settings → Plugins → ⚙ → Install Plugin from Disk**, then restart IntelliJ.
+4. Run `start_bot.cmd`, keep the project open, and select **New chat** in Telegram or the bot window. Confirm the connection in IntelliJ, then send your task.
+
+The Telegram Chat Helper plugin is required to create chats. You do not need to open an AI chat first. The plugin was tested with IDEA build `262.10968.223` and uses an internal AI Assistant API; compatibility with other builds is not guaranteed.
+
+### Commands
+
+- `/new`, `/sessions`, `/use ID` — create or select an IntelliJ chat.
+- Send text or use `/ask TEXT` to start a task; `/cancel` stops it.
+- `/queue TEXT`, `/queue`, `/clearqueue`, `/resumequeue` — manage the task queue.
+- `/models`, `/efforts` — choose a model and reasoning level when offered by the agent.
+- `/pending` — review pending approvals and questions.
+- `/notes`, `/note TEXT`, `/screenshot`, `/compact`, `/limits` — notes, screenshot, context compaction, and Codex limits.
+- `/sleep 08:30`, `/sleep_after 08:30`, `/nosleep` — schedule or cancel Windows hibernation.
+
+Use `/menu` to see all actions. Only the paired owner can send commands or respond to approvals in the private chat.
+
+### Customize
+
+Ask Codex to implement a missing feature in this project. For example: “Add a `/foo` command that does X, add a menu button, and update the README.” Say whether it should be available in Telegram, the bot window, or both. Review the diff in IntelliJ and restart the bot after code changes.
+
+### Notes
+
+- Confirm the first connection and agent permissions in IntelliJ. If the chat does not appear within two minutes, check `/sessions` before trying again; requests are not retried automatically.
+- **Stop bot** terminates the process and may interrupt the current task. Closing an AI chat leaves the bot running.
+- Sleep commands require Windows hibernation and wake timers to be enabled. Keep the bot window running.
+- Do not publish `bot-token.txt`, `*.local.json`, `*.local.tmp`, or `notes.local.json`; they may contain credentials, local settings, or private notes.
+
+### Tests
+
+From the repository root, run:
 
 ```powershell
-python tools/telegram-acp-bridge/idea-helper/build.py --idea "D:/programs/IntelliJ IDEA 2026.2.3" --ai-plugin "$env:APPDATA/JetBrains/IntelliJIdea2026.2/plugins/ml-llm"
+python -m unittest discover -s . -p "test_*.py"
 ```
-
-Плагин принимает только команду создания чата из файлов `idea-*.local.json` в
-папке бота этого проекта. Сетевых портов у него нет. `idea-helper.lock` не позволяет
-двум экземплярам IDE обрабатывать один запрос. Запрос забирается до создания чата,
-поэтому перезапуск IDE не дублирует его. Файлы обмена не содержат токен Telegram.
-Классическая зависимость на AI Assistant предоставляет доступ к его модулям,
-согласно [документации JetBrains о загрузчиках классов](https://plugins.jetbrains.com/docs/intellij/modular-plugins.html#class-loaders).
-
-## Оставшиеся задачи
-
-- Переименование чатов из Telegram.
-- Просмотр и повторное открытие исторических чатов после перезапуска IDE.
-- Выбор другого проекта из Telegram.
