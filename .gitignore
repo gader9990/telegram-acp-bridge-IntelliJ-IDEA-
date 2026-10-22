@@ -1,0 +1,10 @@
+__pycache__/
+*.py[cod]
+*.local.json
+bot-token.txt
+*.lock
+*.log
+*.local.tmp
+*.tmp
+idea-helper/build/
+idea-helper/dist/*.jar

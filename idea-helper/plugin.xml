@@ -1,0 +1,13 @@
+<idea-plugin>
+  <id>local.telegram.chat.helper</id>
+  <name>Telegram Chat Helper</name>
+  <version>1.0.0</version>
+  <vendor>Local project</vendor>
+  <description>Creates AI Assistant chats for the local Telegram bridge.</description>
+  <idea-version since-build="262.10968" until-build="262.10968.*"/>
+  <depends>com.intellij.modules.platform</depends>
+  <depends>com.intellij.ml.llm</depends>
+  <extensions defaultExtensionNs="com.intellij">
+    <postStartupActivity implementation="local.telegram.TelegramChatHelper"/>
+  </extensions>
+</idea-plugin>
